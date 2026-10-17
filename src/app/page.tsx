@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { SiteShell } from "@/components/site-shell";
 import { Card, LinkButton, Badge } from "@/components/ui";
 import { SCHOOL_NAME, SCHOOL_ADDRESS, SCHOOL_PHONE, SCHOOL_EMAIL, STAGES } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
@@ -33,7 +34,7 @@ export default async function HomePage() {
   };
 
   return (
-    <>
+    <SiteShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <section className="bg-brand text-brand-ink">
         <div className="mx-auto max-w-6xl px-4 py-14 md:py-20">
@@ -138,6 +139,6 @@ export default async function HomePage() {
           <LinkButton href="/admissions/apply">ابدأ التقديم</LinkButton>
         </Card>
       </section>
-    </>
+    </SiteShell>
   );
 }
