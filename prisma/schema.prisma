@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity ----------
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  phone        String?
+  passwordHash String
+  role         String // ADMIN | TEACHER | PARENT
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  sessions     Session[]
+  teacher      Teacher?
+  children     Student[] @relation("ParentChildren")
+  sent         Message[] @relation("MessageSent")
+  received     Message[] @relation("MessageReceived")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------- Academics ----------
+
+model Teacher {
+  id          String               @id @default(cuid())
+  userId      String               @unique
+  specialty   String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments TeachingAssignment[]
+  slots       TimetableSlot[]
+  assessments Assessment[]
+  homework    Homework[]
+}
+
+model Subject {
+  id          String               @id @default(cuid())
+  name        String               @unique
+  code        String               @unique
+  assignments TeachingAssignment[]
+  slots       TimetableSlot[]
+  assessments Assessment[]
+  homework    Homework[]
+}
+
+model ClassGroup {
+  id          String               @id @default(cuid())
+  name        String
+  stage       String // KINDERGARTEN | PRIMARY | INTERMEDIATE | SECONDARY
+  level       Int
+  section     String
+  year        String
+  capacity    Int                  @default(30)
+  students    Student[]
+  assignments TeachingAssignment[]
+  slots       TimetableSlot[]
+  assessments Assessment[]
+  homework    Homework[]
+
+  @@unique([stage, level, section, year])
+}
+
+model Student {
+  id          String       @id @default(cuid())
+  studentNo   String       @unique
+  name        String
+  gender      String // M | F
+  birthDate   DateTime
+  status      String       @default("ACTIVE")
+  classId     String?
+  parentId    String?
+  createdAt   DateTime     @default(now())
+  class       ClassGroup?  @relation(fields: [classId], references: [id], onDelete: SetNull)
+  parent      User?        @relation("ParentChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  attendance  Attendance[]
+  grades      Grade[]
+  invoices    Invoice[]
+
+  @@index([classId])
+  @@index([parentId])
+}
+
+model TeachingAssignment {
+  id             String     @id @default(cuid())
+  classId        String
+  subjectId      String
+  teacherId      String
+  periodsPerWeek Int        @default(3)
+  class          ClassGroup @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject        Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher        Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+  @@index([teacherId])
+}
+
+// A teacher can be in one place per period, and a class has one lesson per period.
+model TimetableSlot {
+  id        String     @id @default(cuid())
+  classId   String
+  day       Int // 0 = Sunday ... 4 = Thursday
+  period    Int // 1..7
+  subjectId String
+  teacherId String
+  class     ClassGroup @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher   Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, day, period])
+  @@unique([teacherId, day, period])
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  studentId    String
+  date         String // YYYY-MM-DD
+  status       String // PRESENT | ABSENT | LATE | EXCUSED
+  note         String?
+  recordedById String?
+  createdAt    DateTime @default(now())
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([date])
+}
+
+model Assessment {
+  id        String     @id @default(cuid())
+  classId   String
+  subjectId String
+  teacherId String
+  title     String
+  term      Int        @default(1)
+  maxScore  Float
+  date      DateTime   @default(now())
+  class     ClassGroup @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher   Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  grades    Grade[]
+
+  @@index([classId, subjectId])
+}
+
+model Grade {
+  id           String     @id @default(cuid())
+  assessmentId String
+  studentId    String
+  score        Float
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, studentId])
+}
+
+model Homework {
+  id        String     @id @default(cuid())
+  classId   String
+  subjectId String
+  teacherId String
+  title     String
+  body      String
+  dueDate   String // YYYY-MM-DD
+  createdAt DateTime   @default(now())
+  class     ClassGroup @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher   Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  fromId    String
+  toId      String
+  studentId String?
+  subject   String
+  body      String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+  from      User      @relation("MessageSent", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User      @relation("MessageReceived", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([toId, createdAt])
+  @@index([fromId, createdAt])
+}
+
+// ---------- Fees ----------
+
+model FeePlan {
+  id           String    @id @default(cuid())
+  name         String
+  stage        String
+  amount       Int // SAR per year
+  installments Int       @default(1)
+  year         String
+  description  String?
+  invoices     Invoice[]
+}
+
+model Invoice {
+  id        String    @id @default(cuid())
+  number    String    @unique
+  studentId String
+  feePlanId String?
+  title     String
+  amount    Int
+  dueDate   DateTime
+  createdAt DateTime  @default(now())
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feePlan   FeePlan?  @relation(fields: [feePlanId], references: [id], onDelete: SetNull)
+  payments  Payment[]
+
+  @@index([studentId])
+}
+
+// Payments are recorded manually by the bursar - there is no online gateway.
+model Payment {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  amount       Int
+  method       String // CASH | TRANSFER | CARD_POS
+  reference    String?
+  receivedAt   DateTime @default(now())
+  recordedById String?
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Admissions ----------
+
+model Application {
+  id             String   @id @default(cuid())
+  reference      String   @unique
+  studentName    String
+  birthDate      DateTime
+  gender         String
+  stage          String
+  level          Int
+  guardianName   String
+  phone          String
+  email          String?
+  previousSchool String?
+  notes          String?
+  status         String   @default("PENDING") // PENDING | REVIEW | ACCEPTED | WAITLIST | REJECTED
+  adminNote      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ---------- Content ----------
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  audience  String   @default("ALL") // ALL | PARENTS | TEACHERS
+  authorId  String?
+  createdAt DateTime @default(now())
+}
+
+model NewsPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  body        String
+  category    String
+  publishedAt DateTime
+}
+
+model SchoolEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  startsAt    DateTime
+  location    String
+  category    String
+}
+
+model GalleryItem {
+  id       String @id @default(cuid())
+  title    String
+  category String
+  caption  String
+  hue      Int    @default(200)
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

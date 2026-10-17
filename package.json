@@ -1,0 +1,38 @@
+{
+  "name": "school-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "School website + parents/teachers portal and admin dashboard — Next.js, Arabic RTL",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev -p 3114",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3114",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push --skip-generate",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset --skip-generate && tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.4.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "postcss": "8.5.28",
+    "prisma": "6.19.2",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vitest": "^4.0.0"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "5.3.0",
+    "@prisma/client": "6.19.2",
+    "next": "16.4.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "4.5.4"
+  }
+}
