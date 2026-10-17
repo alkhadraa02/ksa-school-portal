@@ -6,12 +6,12 @@
   "license": "MIT",
   "scripts": {
     "dev": "next dev -p 3114",
-    "build": "prisma generate && next build",
+    "build": "node scripts/ensure-prisma.mjs && next build",
     "start": "next start -p 3114",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push --skip-generate",
+    "db:push": "node scripts/ensure-prisma.mjs && prisma db push --skip-generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset --skip-generate && tsx prisma/seed.ts"
   },
